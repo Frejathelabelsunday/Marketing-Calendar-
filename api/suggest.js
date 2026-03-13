@@ -8,10 +8,12 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { apiKey, events = [], categories = {}, currentDate } = req.body;
+    const { apiKey: clientKey, events = [], categories = {}, currentDate } = req.body;
     const today = currentDate || new Date().toISOString().split("T")[0];
 
-    if (!apiKey) return res.status(400).json({ error: "API key is required" });
+    // Use server-side env var first, fall back to client-provided key
+    const apiKey = process.env.OPENAI_API_KEY || clientKey;
+    if (!apiKey) return res.status(400).json({ error: "API key is required. Set OPENAI_API_KEY in Vercel environment variables." });
 
     const existingTitles = events.map((e) => e.title).join(", ");
     const categoryList = Object.entries(categories)

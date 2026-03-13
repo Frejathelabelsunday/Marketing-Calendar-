@@ -550,10 +550,7 @@ function showSettingsModal() {
 
 async function handleSuggest() {
   const apiKey = getApiKey();
-  if (!apiKey) {
-    showSettingsModal();
-    return;
-  }
+  // Key is optional — server may have it via env var
 
   showLoadingModal();
 
