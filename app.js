@@ -23,7 +23,7 @@ const MONTH_NAMES = [
 
 // ── Persistence ──────────────────────────────────────────
 
-function loadEvents() {
+function loadEventsLocal() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
@@ -35,8 +35,35 @@ function loadEvents() {
   return [...EVENTS];
 }
 
+async function loadEventsFromServer() {
+  try {
+    const res = await fetch("/api/events");
+    const data = await res.json();
+    if (data.events && data.events.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.events));
+      return data.events;
+    }
+  } catch (e) {
+    // Server unavailable — fall back to local
+  }
+  return null;
+}
+
+async function saveEventsToServer() {
+  try {
+    await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events: allEvents }),
+    });
+  } catch (e) {
+    // Server unavailable — local save still works
+  }
+}
+
 function saveEvents() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(allEvents));
+  saveEventsToServer();
 }
 
 function nextEventId() {
@@ -47,8 +74,9 @@ function nextEventId() {
 
 // ── Initialize ───────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", () => {
-  allEvents = loadEvents();
+document.addEventListener("DOMContentLoaded", async () => {
+  // Load from local first for instant render, then sync with server
+  allEvents = loadEventsLocal();
   buildFilterButtons();
   renderCalendarView();
   setupViewToggle();
@@ -65,6 +93,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("suggest-btn").addEventListener("click", () => {
     handleSuggest();
   });
+
+  // Sync with server (shared database)
+  const serverEvents = await loadEventsFromServer();
+  if (serverEvents) {
+    allEvents = serverEvents;
+    reRender();
+  } else if (allEvents.length > 0) {
+    // First time: seed the server with default events
+    saveEventsToServer();
+  }
 });
 
 // ── Filter buttons ───────────────────────────────────────

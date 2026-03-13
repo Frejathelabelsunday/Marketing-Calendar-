@@ -1,0 +1,7 @@
+{
+  "name": "marketing-calendar",
+  "private": true,
+  "dependencies": {
+    "ioredis": "^5.4.1"
+  }
+}
